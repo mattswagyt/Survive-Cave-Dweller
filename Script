@@ -1,0 +1,466 @@
+-- Survive Cave Dweller - BMF (Full Updated Script)
+-- Implements teleport, infinite jump, open exit, monster ESP, infinite stamina, remotes, etc.
+
+-- Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = workspace
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- UI Creation
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = PlayerGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Name = "CaveDwellerUI"
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Size = UDim2.new(0, 300, 0, 460)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -230)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = true
+
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.Text = "Survive Cave Dweller - BMF"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 18
+
+local CodeLabel = Instance.new("TextLabel")
+CodeLabel.Parent = MainFrame
+CodeLabel.Text = "Code: Loading..."
+CodeLabel.Size = UDim2.new(1, 0, 0, 30)
+CodeLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+CodeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+CodeLabel.Font = Enum.Font.SourceSans
+CodeLabel.TextSize = 16
+
+local ErrorLog = Instance.new("TextLabel")
+ErrorLog.Parent = MainFrame
+ErrorLog.Text = "Error Log: None"
+ErrorLog.Size = UDim2.new(1, 0, 0, 80)
+ErrorLog.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+ErrorLog.TextColor3 = Color3.fromRGB(255, 85, 85)
+ErrorLog.Font = Enum.Font.SourceSans
+ErrorLog.TextSize = 14
+ErrorLog.TextWrapped = true
+ErrorLog.TextYAlignment = Enum.TextYAlignment.Top
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = MainFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
+
+-- Toggle UI with Delete key
+UIS.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.Delete then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- Helper: safe pcall wrapper that writes to ErrorLog
+local function safe(action)
+    local ok, res = pcall(action)
+    if not ok then
+        ErrorLog.Text = "Error Log: " .. tostring(res)
+        warn("[CaveDwellerUI] Error:", res)
+    else
+        ErrorLog.Text = "Error Log: None"
+    end
+    return ok, res
+end
+
+-- Button creation utility
+local function createButton(name, callback)
+    local Button = Instance.new("TextButton")
+    Button.Parent = MainFrame
+    Button.Text = name
+    Button.Size = UDim2.new(1, -10, 0, 32)
+    Button.Position = UDim2.new(0, 5, 0, 0)
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Font = Enum.Font.SourceSans
+    Button.TextSize = 16
+    Button.AutoButtonColor = true
+
+    Button.MouseButton1Click:Connect(function()
+        local ok, err = pcall(callback)
+        if not ok then
+            ErrorLog.Text = "Error Log: " .. tostring(err)
+            warn("[Button Error] " .. tostring(name) .. ": " .. tostring(err))
+        end
+    end)
+    return Button
+end
+
+-- Track Code (NumberValue)
+spawn(function()
+    while true do
+        local ok, res = safe(function()
+            local values = ReplicatedStorage:FindFirstChild("Values")
+            if not values then error("ReplicatedStorage.Values missing") end
+            local codeVal = values:FindFirstChild("Code")
+            if not codeVal then error("NumberValue 'Code' missing") end
+            if not tonumber(codeVal.Value) then
+                -- We'll still tostring whatever is stored
+                return codeVal.Value
+            end
+            return tonumber(codeVal.Value)
+        end)
+
+        if ok then
+            CodeLabel.Text = "Code: " .. tostring(res)
+        else
+            CodeLabel.Text = "Code: Error"
+        end
+
+        wait(1)
+    end
+end)
+
+-- Utility: get current character parts
+local function getCharacter()
+    local char = LocalPlayer.Character
+    if not char then
+        return nil
+    end
+    local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChildWhichIsA("BasePart")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    return char, hrp, humanoid
+end
+
+-- Teleport Helpers
+local function teleportToVector3(vec3)
+    local char, hrp = getCharacter()
+    if not char or not hrp then
+        error("Character or root part not found")
+    end
+    -- try to set CFrame safely
+    hrp.CFrame = CFrame.new(vec3)
+end
+
+-- BUTTON: Lobby (teleport to 3,4,8)
+createButton("Lobby", function()
+    safe(function()
+        teleportToVector3(Vector3.new(3, 4, 8))
+        print("Teleported to Lobby (3,4,8).")
+    end)
+end)
+
+-- BUTTON: Map (teleport to 146, -108, 1)
+createButton("Map", function()
+    safe(function()
+        teleportToVector3(Vector3.new(146, -108, 1))
+        print("Teleported to Map (146, -108, 1).")
+    end)
+end)
+
+-- Infinite Jump implementation
+local infiniteJumpEnabled = false
+local function setInfiniteJump(enabled)
+    infiniteJumpEnabled = enabled
+end
+
+-- Hook jump request (works in local scripts)
+local jumpConn
+local function enableInfiniteJump()
+    if jumpConn then jumpConn:Disconnect() end
+    jumpConn = UIS.JumpRequest:Connect(function()
+        if not infiniteJumpEnabled then return end
+        local char, hrp, humanoid = getCharacter()
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            humanoid.Jump = true
+        end
+    end)
+end
+
+-- Button: Infinite Jump (toggle)
+createButton("Infinite Jump", function()
+    setInfiniteJump(not infiniteJumpEnabled)
+    if infiniteJumpEnabled then
+        enableInfiniteJump()
+        print("Infinite Jump: ON")
+    else
+        if jumpConn then
+            jumpConn:Disconnect()
+            jumpConn = nil
+        end
+        print("Infinite Jump: OFF")
+    end
+end)
+
+-- BUTTON: Open Exit (sets ReplicatedStorage.Values.ExitOpen = true)
+createButton("Open Exit", function()
+    safe(function()
+        local values = ReplicatedStorage:FindFirstChild("Values")
+        if not values then error("ReplicatedStorage.Values missing") end
+        local exitVal = values:FindFirstChild("ExitOpen")
+        if not exitVal then
+            -- create it if it doesn't exist (local change)
+            exitVal = Instance.new("BoolValue")
+            exitVal.Name = "ExitOpen"
+            exitVal.Parent = values
+        end
+        exitVal.Value = true
+        print("ExitOpen set to true.")
+    end)
+end)
+
+-- MONSTER ESP
+local espEnabled = false
+local highlightInstance = nil
+local tracerDrawing = nil
+local tracerConnection = nil
+
+local function enableMonsterESP()
+    if espEnabled then return end
+    espEnabled = true
+
+    -- Create Highlight (works in modern Roblox)
+    safe(function()
+        local monster = Workspace:FindFirstChild("GameObjects") and Workspace.GameObjects:FindFirstChild("Entities") and Workspace.GameObjects.Entities:FindFirstChild("CaveDweller")
+        if not monster then error("Monster model 'workspace.GameObjects.Entities.CaveDweller' not found") end
+
+        -- If multiple monsters, you may want to iterate; this will handle a single model.
+        -- We'll attach Highlight to the model
+        highlightInstance = Instance.new("Highlight")
+        highlightInstance.Name = "CaveDwellerHighlight"
+        highlightInstance.Adornee = monster
+        highlightInstance.Parent = workspace -- parent to workspace or PlayerGui depending on execution context
+        highlightInstance.FillTransparency = 1 -- hide fill so we only see outline
+        highlightInstance.OutlineColor = Color3.fromRGB(255, 0, 0)
+        highlightInstance.OutlineTransparency = 0
+    end)
+
+    -- Drawing tracer (if exploit supports Drawing). We'll attempt to use Drawing; if not available, skip tracer but leave highlight.
+    local successDrawing, DrawingLib = pcall(function() return Drawing end)
+    if successDrawing and DrawingLib then
+        tracerDrawing = Drawing.new("Line")
+        tracerDrawing.Color = Color3.new(1, 0, 0)
+        tracerDrawing.Thickness = 2
+        tracerDrawing.Transparency = 1
+        tracerDrawing.Visible = true
+
+        tracerConnection = RunService.RenderStepped:Connect(function()
+            local monster = Workspace:FindFirstChild("GameObjects") and Workspace.GameObjects:FindFirstChild("Entities") and Workspace.GameObjects.Entities:FindFirstChild("CaveDweller")
+            if not monster then
+                tracerDrawing.Visible = false
+                return
+            end
+            local targetPart = monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChildWhichIsA("BasePart")
+            if not targetPart then
+                tracerDrawing.Visible = false
+                return
+            end
+            local camera = Workspace.CurrentCamera
+            local pos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
+            local screenX, screenY = pos.X, pos.Y
+            local centerX = camera.ViewportSize.X / 2
+            local centerY = camera.ViewportSize.Y / 2
+            tracerDrawing.From = Vector2.new(centerX, centerY)
+            tracerDrawing.To = Vector2.new(screenX, screenY)
+            tracerDrawing.Visible = onScreen
+        end)
+    else
+        -- Drawing not available; just keep Highlight
+        print("Drawing library not available; tracers disabled, highlight enabled.")
+    end
+
+    print("Monster ESP enabled.")
+end
+
+local function disableMonsterESP()
+    espEnabled = false
+    if highlightInstance and highlightInstance.Parent then
+        highlightInstance:Destroy()
+        highlightInstance = nil
+    end
+    if tracerConnection then
+        tracerConnection:Disconnect()
+        tracerConnection = nil
+    end
+    if tracerDrawing then
+        pcall(function() tracerDrawing:Remove() end)
+        tracerDrawing = nil
+    end
+    print("Monster ESP disabled.")
+end
+
+createButton("Monster ESP", function()
+    if not espEnabled then
+        safe(enableMonsterESP)
+    else
+        safe(disableMonsterESP)
+    end
+end)
+
+-- INFINITE STAMINA
+local infiniteStaminaEnabled = false
+local originalWalkSpeed = nil
+local shiftHeld = false
+
+-- Hold left shift to set walkspeed to 50 while held
+local shiftConnBegin, shiftConnEnd
+
+local function enableInfiniteStamina()
+    if infiniteStaminaEnabled then return end
+    infiniteStaminaEnabled = true
+
+    -- Delete sprint GUI node if it exists
+    local successDel = pcall(function()
+        local sprintGui = PlayerGui:FindFirstChild("Sprint")
+        if sprintGui then
+            local sprintChild = sprintGui:FindFirstChild("Sprint")
+            if sprintChild then
+                sprintChild:Destroy()
+                print("Sprint GUI entry deleted.")
+            end
+        end
+    end)
+    if not successDel then
+        warn("Failed to delete sprint GUI (non-fatal).")
+    end
+
+    -- Setup shift handling
+    originalWalkSpeed = originalWalkSpeed or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed) or 16
+
+    shiftConnBegin = UIS.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == Enum.KeyCode.LeftShift then
+            shiftHeld = true
+            local char, hrp, humanoid = getCharacter()
+            if humanoid then
+                humanoid.WalkSpeed = 50
+            end
+        end
+    end)
+
+    shiftConnEnd = UIS.InputEnded:Connect(function(input, gameProcessed)
+        if input.KeyCode == Enum.KeyCode.LeftShift then
+            shiftHeld = false
+            local char, hrp, humanoid = getCharacter()
+            if humanoid and originalWalkSpeed then
+                humanoid.WalkSpeed = originalWalkSpeed
+            end
+        end
+    end)
+
+    -- Also handle character respawn to restore behavior
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        wait(0.5)
+        if shiftHeld and infiniteStaminaEnabled then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.WalkSpeed = 50 end
+        end
+    end)
+
+    print("Infinite Stamina enabled: Hold LeftShift to run at 50 WalkSpeed.")
+end
+
+local function disableInfiniteStamina()
+    infiniteStaminaEnabled = false
+    if shiftConnBegin then shiftConnBegin:Disconnect(); shiftConnBegin = nil end
+    if shiftConnEnd then shiftConnEnd:Disconnect(); shiftConnEnd = nil end
+    -- restore original walkspeed
+    local char, hrp, humanoid = getCharacter()
+    if humanoid and originalWalkSpeed then
+        humanoid.WalkSpeed = originalWalkSpeed
+    end
+    print("Infinite Stamina disabled.")
+end
+
+createButton("Infinite Stamina", function()
+    if not infiniteStaminaEnabled then
+        safe(enableInfiniteStamina)
+    else
+        safe(disableInfiniteStamina)
+    end
+end)
+
+-- Launch Nuke (fires remote)
+createButton("Launch Nuke", function()
+    safe(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if not remotes then error("ReplicatedStorage.Remotes missing") end
+        local nuke = remotes:FindFirstChild("LaunchNuke")
+        if not nuke then error("LaunchNuke remote not found") end
+        if nuke.FireServer then
+            nuke:FireServer()
+        elseif nuke.InvokeServer then
+            nuke:InvokeServer()
+        else
+            error("LaunchNuke remote has no FireServer/InvokeServer method")
+        end
+        print("LaunchNuke fired.")
+    end)
+end)
+
+-- Become entity (fires with string argument per your A)
+local function becomeEntity(name)
+    safe(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if not remotes then error("ReplicatedStorage.Remotes missing") end
+        local become = remotes:FindFirstChild("BecomeEntity")
+        if not become then error("BecomeEntity remote not found") end
+        become:FireServer(tostring(name))
+        print("BecomeEntity fired with argument:", tostring(name))
+    end)
+end
+
+createButton("Become CaveDweller", function()
+    becomeEntity("CaveDweller")
+end)
+
+createButton("Become Wendigo", function()
+    becomeEntity("Wendigo")
+end)
+
+createButton("Become Werewolf", function()
+    becomeEntity("Werewolf")
+end)
+
+-- small quality-of-life: Full Bright + Unlock Camera
+createButton("Full Bright", function()
+    safe(function()
+        Lighting.Brightness = 5
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.new(1,1,1)
+    end)
+end)
+
+createButton("Unlock Camera", function()
+    safe(function()
+        LocalPlayer.CameraMode = Enum.CameraMode.Classic
+        LocalPlayer.CameraMinZoomDistance = 0
+        LocalPlayer.CameraMaxZoomDistance = 50
+    end)
+end)
+
+-- clean up on script disable/unload
+local function cleanup()
+    if jumpConn then jumpConn:Disconnect(); jumpConn = nil end
+    if tracerConnection then tracerConnection:Disconnect(); tracerConnection = nil end
+    if tracerDrawing then pcall(function() tracerDrawing:Remove() end); tracerDrawing = nil end
+    if highlightInstance and highlightInstance.Parent then highlightInstance:Destroy(); highlightInstance = nil end
+    if shiftConnBegin then shiftConnBegin:Disconnect(); shiftConnBegin = nil end
+    if shiftConnEnd then shiftConnEnd:Disconnect(); shiftConnEnd = nil end
+end
+
+-- Bind to Close/Destroy if needed
+ScreenGui.Destroying:Connect(function() cleanup() end)
+
+print("✅ Survive Cave Dweller - BMF Script Loaded Successfully")

@@ -1,5 +1,4 @@
--- Survive Cave Dweller - BMF (Full Updated Script)
--- Implements teleport, infinite jump, open exit, monster ESP, infinite stamina, remotes, etc.
+-- Survive Cave Dweller - By BMF
 
 -- Services
 local Players = game:GetService("Players")
@@ -92,23 +91,16 @@ end
 local function createButton(name, callback)
     local Button = Instance.new("TextButton")
     Button.Parent = MainFrame
-    Button.Size = UDim2.new(1, 0, 0, 34)
-    Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.Font = Enum.Font.Gotham
-    Button.TextSize = 15
     Button.Text = name
-    Button.AutoButtonColor = true
-
-    local corner = Instance.new("UICorner", Button)
-    corner.CornerRadius = UDim.new(0, 6)
-
+    Button.Size = UDim2.new(1, 0, 0, 30)
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Font = Enum.Font.SourceSans
+    Button.TextSize = 16
     Button.MouseButton1Click:Connect(function()
-        local ok, err = pcall(callback)
-        if not ok then
-            ErrorLog.Text = "Error: " .. tostring(err)
-        end
+        pcall(callback)
     end)
+    return Button
 end
 
 -- Track Code (NumberValue)

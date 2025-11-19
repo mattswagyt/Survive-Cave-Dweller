@@ -246,6 +246,97 @@ createButton("Escape", function()
     end)
 end)
 
+-- GOD MODE
+local godModeEnabled = false
+local godLoop = nil
+local healthLoop = nil
+
+local function destroyPath(pathString)
+    local obj = nil
+    local success, result = pcall(function()
+        return loadstring("return " .. pathString)()
+    end)
+    if success then obj = result end
+
+    if obj and typeof(obj) == "Instance" and obj.Parent then
+        obj:Destroy()
+        print("[God Mode] Destroyed:", pathString)
+    end
+end
+
+local function getHumanoid()
+    local char = game:GetService("Players").LocalPlayer.Character
+    if char then
+        return char:FindFirstChildOfClass("Humanoid")
+    end
+    return nil
+end
+
+local function keepHealthMax()
+    local player = game:GetService("Players").LocalPlayer
+
+    healthLoop = task.spawn(function()
+        while godModeEnabled do
+            local hum = getHumanoid()
+            if hum then
+                hum.Health = hum.MaxHealth -- keep perfect HP
+
+                -- prevent death attempts
+                if hum.Health <= 0 then
+                    hum.Health = hum.MaxHealth
+                end
+            end
+            task.wait(0.1) -- fast loop but not laggy
+        end
+    end)
+end
+
+local function enableGodMode()
+    if godModeEnabled then return end
+    godModeEnabled = true
+
+    -- Destroy once
+    local destroyList = {
+        "workspace.GameObjects.Entities.CaveDweller.Scripts",
+        "workspace.GameObjects.Entities.CaveDweller.AttackTrigger",
+        "game:GetService('ReplicatedStorage').Assets.Models.Head.DeathTrigger",
+        "workspace.legen.Health",
+        "game:GetService('Players').LocalPlayer.PlayerGui.Jumpscare",
+        "game:GetService('ReplicatedStorage').Modules.Widgets.JumpscareWidget",
+        "game:GetService('ReplicatedStorage').Remotes.Jumpscare"
+    }
+
+    for _, path in ipairs(destroyList) do
+        destroyPath(path)
+    end
+
+    -- Constant attacker remover
+    godLoop = task.spawn(function()
+        while godModeEnabled do
+            destroyPath("workspace.GameObjects.Entities.CaveDweller.AttackTrigger")
+            task.wait(1)
+        end
+    end)
+
+    -- Start health lock loop
+    keepHealthMax()
+
+    print("GOD MODE ENABLED")
+end
+
+local function disableGodMode()
+    godModeEnabled = false
+    print("GOD MODE DISABLED")
+end
+
+createButton("God Mode", function()
+    if not godModeEnabled then
+        safe(enableGodMode)
+    else
+        safe(disableGodMode)
+    end
+end)
+
 -- Infinite Jump implementation
 local infiniteJumpEnabled = false
 local function setInfiniteJump(enabled)

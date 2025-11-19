@@ -15,9 +15,20 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 -- Create UI Elements 
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
+
+-- Sub frames
+local HeaderFrame = Instance.new("Frame")
+local ButtonArea = Instance.new("Frame")
+local FooterFrame = Instance.new("Frame")
+
+-- Header contents
 local Title = Instance.new("TextLabel")
-local CodeLabel = Instance.new("TextLabel") -- keeps your CodeLabel
+
+-- Footer contents (keep your CodeLabel + ErrorLog variables)
+local CodeLabel = Instance.new("TextLabel")
 local ErrorLog = Instance.new("TextLabel")
+
+-- Layout for buttons only
 local UIListLayout = Instance.new("UIListLayout")
 
 -- UI Properties 
@@ -27,34 +38,66 @@ ScreenGui.Name = "CaveDwellerUI"
 
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Size = UDim2.new(0, 300, 0, 400) -- matched to Intruder
+MainFrame.Size = UDim2.new(0, 300, 0, 400)
 MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Visible = true
 
-Title.Parent = MainFrame
+-- HeaderFrame (top)
+HeaderFrame.Name = "HeaderFrame"
+HeaderFrame.Parent = MainFrame
+HeaderFrame.BackgroundTransparency = 1
+HeaderFrame.Size = UDim2.new(1, 0, 0, 30)
+HeaderFrame.Position = UDim2.new(0, 0, 0, 0)
+
+Title.Parent = HeaderFrame
 Title.Text = "Survive Cave Dweller - BMF"
-Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Size = UDim2.new(1, 0, 1, 0)
 Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 18
+Title.TextWrapped = false
+Title.TextXAlignment = Enum.TextXAlignment.Center
 Title.LayoutOrder = 0
 
--- Code Label
-CodeLabel.Parent = MainFrame
+-- ButtonArea (middle) - will contain all buttons and the UIListLayout
+ButtonArea.Name = "ButtonArea"
+ButtonArea.Parent = MainFrame
+ButtonArea.BackgroundTransparency = 1
+-- leave some space for header & footer: header 30, footer 60 -> total 90
+ButtonArea.Position = UDim2.new(0, 0, 0, 30)
+ButtonArea.Size = UDim2.new(1, 0, 1, -90) -- fills remainder between header and footer
+
+UIListLayout.Parent = ButtonArea
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
+
+-- FooterFrame (bottom)
+FooterFrame.Name = "FooterFrame"
+FooterFrame.Parent = MainFrame
+FooterFrame.BackgroundTransparency = 1
+FooterFrame.Size = UDim2.new(1, 0, 0, 60)
+FooterFrame.Position = UDim2.new(0, 0, 1, -60)
+
+-- Code Label (in footer)
+CodeLabel.Parent = FooterFrame
 CodeLabel.Text = "Code: Loading..."
-CodeLabel.Size = UDim2.new(1, 0, 0, 30) -- matches Intruder element height
+CodeLabel.Size = UDim2.new(1, 0, 0, 30)
+CodeLabel.Position = UDim2.new(0, 0, 0, 0)
 CodeLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 CodeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 CodeLabel.Font = Enum.Font.SourceSans
 CodeLabel.TextSize = 16
 CodeLabel.LayoutOrder = 1
+CodeLabel.TextXAlignment = Enum.TextXAlignment.Center
 
-ErrorLog.Parent = MainFrame
+-- Error Log (in footer)
+ErrorLog.Parent = FooterFrame
 ErrorLog.Text = "Error Log: None"
-ErrorLog.Size = UDim2.new(1, 0, 0, 30) -- match Intruder's smaller header height
+ErrorLog.Size = UDim2.new(1, 0, 0, 30)
+ErrorLog.Position = UDim2.new(0, 0, 0, 30)
 ErrorLog.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 ErrorLog.TextColor3 = Color3.fromRGB(255, 85, 85)
 ErrorLog.Font = Enum.Font.SourceSans
@@ -62,9 +105,7 @@ ErrorLog.TextSize = 14
 ErrorLog.TextWrapped = true
 ErrorLog.TextYAlignment = Enum.TextYAlignment.Top
 ErrorLog.LayoutOrder = 2
-
-UIListLayout.Parent = MainFrame
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ErrorLog.TextXAlignment = Enum.TextXAlignment.Center
 
 -- Toggle UI with Delete key
 UIS.InputBegan:Connect(function(input, processed)
@@ -85,16 +126,19 @@ local function safe(action)
     return ok, res
 end
 
--- Function to Create Buttons
+-- Function to Create Buttons (parented to ButtonArea)
+local buttonIndex = 1
 local function createButton(name, callback)
     local Button = Instance.new("TextButton")
-    Button.Parent = MainFrame
+    Button.Parent = ButtonArea
     Button.Text = name
     Button.Size = UDim2.new(1, 0, 0, 30)
     Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     Button.TextColor3 = Color3.fromRGB(255, 255, 255)
     Button.Font = Enum.Font.SourceSans
     Button.TextSize = 16
+    Button.LayoutOrder = buttonIndex
+    buttonIndex = buttonIndex + 1
     Button.MouseButton1Click:Connect(function()
         pcall(callback)
     end)

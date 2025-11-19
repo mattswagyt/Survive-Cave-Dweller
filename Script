@@ -95,16 +95,26 @@ ErrorLog.TextYAlignment = Enum.TextYAlignment.Top
 ErrorLog.LayoutOrder = 2
 ErrorLog.TextXAlignment = Enum.TextXAlignment.Center
 
--- ButtonArea (below footer, fills remaining space)
+-- ButtonArea (scrollable, below footer)
+ButtonArea = Instance.new("ScrollingFrame")
 ButtonArea.Name = "ButtonArea"
 ButtonArea.Parent = MainFrame
 ButtonArea.BackgroundTransparency = 1
 ButtonArea.Position = UDim2.new(0, 0, 0, 90) -- header + footer height = 30 + 60
-ButtonArea.Size = UDim2.new(1, 0, 1, -90) -- remainder of frame
+ButtonArea.Size = UDim2.new(1, 0, 1, -90)
+ButtonArea.CanvasSize = UDim2.new(0, 0, 0, 0) -- will auto adjust
+ButtonArea.ScrollBarThickness = 6
+ButtonArea.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
 
+UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = ButtonArea
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 6)
+
+-- Auto-resize Canvas based on buttons
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ButtonArea.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 6)
+end)
 
 -- Toggle UI with Delete key
 UIS.InputBegan:Connect(function(input, processed)

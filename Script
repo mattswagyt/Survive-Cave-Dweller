@@ -238,6 +238,14 @@ createButton("Map", function()
     end)
 end)
 
+-- Escape
+createButton("Escape", function()
+    safe(function()
+        teleportToVector3(Vector3.new(1296, 7, 0))
+        print("You have successfully escaped! (1296, 7, 0).")
+    end)
+end)
+
 -- Infinite Jump implementation
 local infiniteJumpEnabled = false
 local function setInfiniteJump(enabled)

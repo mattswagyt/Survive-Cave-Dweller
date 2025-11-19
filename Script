@@ -65,7 +65,6 @@ ErrorLog.LayoutOrder = 2
 
 UIListLayout.Parent = MainFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 6)
 
 -- Toggle UI with Delete key
 UIS.InputBegan:Connect(function(input, processed)
@@ -86,8 +85,7 @@ local function safe(action)
     return ok, res
 end
 
--- Button creation utility (assigns layout order to keep list tidy)
-local buttonIndex = 3
+-- Function to Create Buttons
 local function createButton(name, callback)
     local Button = Instance.new("TextButton")
     Button.Parent = MainFrame
@@ -97,8 +95,6 @@ local function createButton(name, callback)
     Button.TextColor3 = Color3.fromRGB(255, 255, 255)
     Button.Font = Enum.Font.SourceSans
     Button.TextSize = 16
-    Button.LayoutOrder = buttonIndex
-    buttonIndex = buttonIndex + 1
     Button.MouseButton1Click:Connect(function()
         pcall(callback)
     end)

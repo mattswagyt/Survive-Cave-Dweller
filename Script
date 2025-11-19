@@ -12,22 +12,27 @@ local Workspace = workspace
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- UI Creation
+-- Create UI Elements 
 local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local CodeLabel = Instance.new("TextLabel") -- keeps your CodeLabel
+local ErrorLog = Instance.new("TextLabel")
+local UIListLayout = Instance.new("UIListLayout")
+
+-- UI Properties 
 ScreenGui.Parent = PlayerGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Name = "CaveDwellerUI"
 
-local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Size = UDim2.new(0, 300, 0, 460)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -230)
+MainFrame.Size = UDim2.new(0, 300, 0, 400) -- matched to Intruder
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Visible = true
 
-local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
 Title.Text = "Survive Cave Dweller - BMF"
 Title.Size = UDim2.new(1, 0, 0, 30)
@@ -35,35 +40,29 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 18
+Title.LayoutOrder = 0
 
-local CodeLabel = Instance.new("TextLabel")
+-- Code Label
 CodeLabel.Parent = MainFrame
 CodeLabel.Text = "Code: Loading..."
-CodeLabel.Size = UDim2.new(1, 0, 0, 30)
+CodeLabel.Size = UDim2.new(1, 0, 0, 30) -- matches Intruder element height
 CodeLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 CodeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 CodeLabel.Font = Enum.Font.SourceSans
 CodeLabel.TextSize = 16
+CodeLabel.LayoutOrder = 1
 
-local ErrorLog = Instance.new("TextLabel")
 ErrorLog.Parent = MainFrame
 ErrorLog.Text = "Error Log: None"
-ErrorLog.Size = UDim2.new(1, 0, 0, 80)
+ErrorLog.Size = UDim2.new(1, 0, 0, 30) -- match Intruder's smaller header height
 ErrorLog.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 ErrorLog.TextColor3 = Color3.fromRGB(255, 85, 85)
 ErrorLog.Font = Enum.Font.SourceSans
 ErrorLog.TextSize = 14
 ErrorLog.TextWrapped = true
 ErrorLog.TextYAlignment = Enum.TextYAlignment.Top
+ErrorLog.LayoutOrder = 2
 
-local UIPadding = Instance.new("UIPadding")
-UIPadding.Parent = MainFrame
-UIPadding.PaddingTop = UDim.new(0, 8)
-UIPadding.PaddingBottom = UDim.new(0, 8)
-UIPadding.PaddingLeft = UDim.new(0, 8)
-UIPadding.PaddingRight = UDim.new(0, 8)
-
-local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = MainFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 6)
@@ -87,7 +86,8 @@ local function safe(action)
     return ok, res
 end
 
--- Button creation utility
+-- Button creation utility (assigns layout order to keep list tidy)
+local buttonIndex = 3
 local function createButton(name, callback)
     local Button = Instance.new("TextButton")
     Button.Parent = MainFrame
@@ -97,13 +97,15 @@ local function createButton(name, callback)
     Button.TextColor3 = Color3.fromRGB(255, 255, 255)
     Button.Font = Enum.Font.SourceSans
     Button.TextSize = 16
+    Button.LayoutOrder = buttonIndex
+    buttonIndex = buttonIndex + 1
     Button.MouseButton1Click:Connect(function()
         pcall(callback)
     end)
     return Button
 end
 
--- Track Code (NumberValue)
+-- Track Code (NumberValue) (keeps your implementation)
 spawn(function()
     while true do
         local ok, res = safe(function()
@@ -232,11 +234,11 @@ local function enableMonsterESP()
         local monster = Workspace:FindFirstChild("GameObjects") and Workspace.GameObjects:FindFirstChild("Entities") and Workspace.GameObjects.Entities:FindFirstChild("CaveDweller")
         if not monster then error("Monster model 'workspace.GameObjects.Entities.CaveDweller' not found") end
 
-        -- If multiple monsters, you may want to iterate; this will handle a single model.
-        -- We'll attach Highlight to the model
+        -- Adornee should be a BasePart (safer)
+        local rootPart = monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChildWhichIsA("BasePart")
         highlightInstance = Instance.new("Highlight")
         highlightInstance.Name = "CaveDwellerHighlight"
-        highlightInstance.Adornee = monster
+        highlightInstance.Adornee = rootPart or monster
         highlightInstance.Parent = workspace -- parent to workspace or PlayerGui depending on execution context
         highlightInstance.FillTransparency = 1 -- hide fill so we only see outline
         highlightInstance.OutlineColor = Color3.fromRGB(255, 0, 0)

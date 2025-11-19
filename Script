@@ -17,16 +17,16 @@ local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 
 -- Sub frames
-local HeaderFrame = Instance.new("Frame")
-local ButtonArea = Instance.new("Frame")
-local FooterFrame = Instance.new("Frame")
+local HeaderFrame = Instance.new("Frame") -- Title
+local FooterFrame = Instance.new("Frame") -- Code + Error
+local ButtonArea = Instance.new("Frame") -- Buttons
+
+-- Footer contents
+local CodeLabel = Instance.new("TextLabel")
+local ErrorLog = Instance.new("TextLabel")
 
 -- Header contents
 local Title = Instance.new("TextLabel")
-
--- Footer contents (keep your CodeLabel + ErrorLog variables)
-local CodeLabel = Instance.new("TextLabel")
-local ErrorLog = Instance.new("TextLabel")
 
 -- Layout for buttons only
 local UIListLayout = Instance.new("UIListLayout")
@@ -44,7 +44,7 @@ MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Visible = true
 
--- HeaderFrame (top)
+-- HeaderFrame (top) - Title only
 HeaderFrame.Name = "HeaderFrame"
 HeaderFrame.Parent = MainFrame
 HeaderFrame.BackgroundTransparency = 1
@@ -62,26 +62,14 @@ Title.TextWrapped = false
 Title.TextXAlignment = Enum.TextXAlignment.Center
 Title.LayoutOrder = 0
 
--- ButtonArea (middle) - will contain all buttons and the UIListLayout
-ButtonArea.Name = "ButtonArea"
-ButtonArea.Parent = MainFrame
-ButtonArea.BackgroundTransparency = 1
--- leave some space for header & footer: header 30, footer 60 -> total 90
-ButtonArea.Position = UDim2.new(0, 0, 0, 30)
-ButtonArea.Size = UDim2.new(1, 0, 1, -90) -- fills remainder between header and footer
-
-UIListLayout.Parent = ButtonArea
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 6)
-
--- FooterFrame (bottom)
+-- FooterFrame (below header) - Code + Error
 FooterFrame.Name = "FooterFrame"
 FooterFrame.Parent = MainFrame
 FooterFrame.BackgroundTransparency = 1
 FooterFrame.Size = UDim2.new(1, 0, 0, 60)
-FooterFrame.Position = UDim2.new(0, 0, 1, -60)
+FooterFrame.Position = UDim2.new(0, 0, 0, 30) -- immediately below header
 
--- Code Label (in footer)
+-- Code Label (top part of footer)
 CodeLabel.Parent = FooterFrame
 CodeLabel.Text = "Code: Loading..."
 CodeLabel.Size = UDim2.new(1, 0, 0, 30)
@@ -93,7 +81,7 @@ CodeLabel.TextSize = 16
 CodeLabel.LayoutOrder = 1
 CodeLabel.TextXAlignment = Enum.TextXAlignment.Center
 
--- Error Log (in footer)
+-- Error Log (bottom part of footer)
 ErrorLog.Parent = FooterFrame
 ErrorLog.Text = "Error Log: None"
 ErrorLog.Size = UDim2.new(1, 0, 0, 30)
@@ -106,6 +94,17 @@ ErrorLog.TextWrapped = true
 ErrorLog.TextYAlignment = Enum.TextYAlignment.Top
 ErrorLog.LayoutOrder = 2
 ErrorLog.TextXAlignment = Enum.TextXAlignment.Center
+
+-- ButtonArea (below footer, fills remaining space)
+ButtonArea.Name = "ButtonArea"
+ButtonArea.Parent = MainFrame
+ButtonArea.BackgroundTransparency = 1
+ButtonArea.Position = UDim2.new(0, 0, 0, 90) -- header + footer height = 30 + 60
+ButtonArea.Size = UDim2.new(1, 0, 1, -90) -- remainder of frame
+
+UIListLayout.Parent = ButtonArea
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
 
 -- Toggle UI with Delete key
 UIS.InputBegan:Connect(function(input, processed)
@@ -154,7 +153,6 @@ spawn(function()
             local codeVal = values:FindFirstChild("Code")
             if not codeVal then error("NumberValue 'Code' missing") end
             if not tonumber(codeVal.Value) then
-                -- We'll still tostring whatever is stored
                 return codeVal.Value
             end
             return tonumber(codeVal.Value)
@@ -187,11 +185,34 @@ local function teleportToVector3(vec3)
     if not char or not hrp then
         error("Character or root part not found")
     end
-    -- try to set CFrame safely
     hrp.CFrame = CFrame.new(vec3)
 end
 
--- BUTTON: Lobby (teleport to 3,4,8)
+-- Infinite Yield
+createButton("Infinite Yield", function()
+    local success, result = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    end)
+    if success then
+        print("Infinite Yield executed!")
+    else
+        print("Error executing Infinite Yield")
+    end
+end)
+
+-- Dex Explorer
+createButton("Dex Explorer", function()
+    local success, result = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
+    end)
+    if success then
+        print("Dex Explorer executed!")
+    else
+        print("Error executing Dex Explorer")
+    end
+end)
+
+-- Teleport to Lobby
 createButton("Lobby", function()
     safe(function()
         teleportToVector3(Vector3.new(3, 4, 8))
@@ -199,7 +220,7 @@ createButton("Lobby", function()
     end)
 end)
 
--- BUTTON: Map (teleport to 146, -108, 1)
+-- Teleport to Map
 createButton("Map", function()
     safe(function()
         teleportToVector3(Vector3.new(146, -108, 1))
@@ -213,7 +234,6 @@ local function setInfiniteJump(enabled)
     infiniteJumpEnabled = enabled
 end
 
--- Hook jump request (works in local scripts)
 local jumpConn
 local function enableInfiniteJump()
     if jumpConn then jumpConn:Disconnect() end
@@ -227,7 +247,6 @@ local function enableInfiniteJump()
     end)
 end
 
--- Button: Infinite Jump (toggle)
 createButton("Infinite Jump", function()
     setInfiniteJump(not infiniteJumpEnabled)
     if infiniteJumpEnabled then
@@ -242,14 +261,13 @@ createButton("Infinite Jump", function()
     end
 end)
 
--- BUTTON: Open Exit (sets ReplicatedStorage.Values.ExitOpen = true)
+-- BUTTON: Open Exit
 createButton("Open Exit", function()
     safe(function()
         local values = ReplicatedStorage:FindFirstChild("Values")
         if not values then error("ReplicatedStorage.Values missing") end
         local exitVal = values:FindFirstChild("ExitOpen")
         if not exitVal then
-            -- create it if it doesn't exist (local change)
             exitVal = Instance.new("BoolValue")
             exitVal.Name = "ExitOpen"
             exitVal.Parent = values
@@ -269,23 +287,20 @@ local function enableMonsterESP()
     if espEnabled then return end
     espEnabled = true
 
-    -- Create Highlight (works in modern Roblox)
     safe(function()
         local monster = Workspace:FindFirstChild("GameObjects") and Workspace.GameObjects:FindFirstChild("Entities") and Workspace.GameObjects.Entities:FindFirstChild("CaveDweller")
         if not monster then error("Monster model 'workspace.GameObjects.Entities.CaveDweller' not found") end
 
-        -- Adornee should be a BasePart (safer)
         local rootPart = monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChildWhichIsA("BasePart")
         highlightInstance = Instance.new("Highlight")
         highlightInstance.Name = "CaveDwellerHighlight"
         highlightInstance.Adornee = rootPart or monster
-        highlightInstance.Parent = workspace -- parent to workspace or PlayerGui depending on execution context
-        highlightInstance.FillTransparency = 1 -- hide fill so we only see outline
+        highlightInstance.Parent = workspace
+        highlightInstance.FillTransparency = 1
         highlightInstance.OutlineColor = Color3.fromRGB(255, 0, 0)
         highlightInstance.OutlineTransparency = 0
     end)
 
-    -- Drawing tracer (if exploit supports Drawing). We'll attempt to use Drawing; if not available, skip tracer but leave highlight.
     local successDrawing, DrawingLib = pcall(function() return Drawing end)
     if successDrawing and DrawingLib then
         tracerDrawing = Drawing.new("Line")
@@ -315,7 +330,6 @@ local function enableMonsterESP()
             tracerDrawing.Visible = onScreen
         end)
     else
-        -- Drawing not available; just keep Highlight
         print("Drawing library not available; tracers disabled, highlight enabled.")
     end
 
@@ -352,14 +366,12 @@ local infiniteStaminaEnabled = false
 local originalWalkSpeed = nil
 local shiftHeld = false
 
--- Hold left shift to set walkspeed to 50 while held
 local shiftConnBegin, shiftConnEnd
 
 local function enableInfiniteStamina()
     if infiniteStaminaEnabled then return end
     infiniteStaminaEnabled = true
 
-    -- Delete sprint GUI node if it exists
     local successDel = pcall(function()
         local sprintGui = PlayerGui:FindFirstChild("Sprint")
         if sprintGui then
@@ -374,7 +386,6 @@ local function enableInfiniteStamina()
         warn("Failed to delete sprint GUI (non-fatal).")
     end
 
-    -- Setup shift handling
     originalWalkSpeed = originalWalkSpeed or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed) or 16
 
     shiftConnBegin = UIS.InputBegan:Connect(function(input, gameProcessed)
@@ -398,7 +409,6 @@ local function enableInfiniteStamina()
         end
     end)
 
-    -- Also handle character respawn to restore behavior
     LocalPlayer.CharacterAdded:Connect(function(char)
         wait(0.5)
         if shiftHeld and infiniteStaminaEnabled then
@@ -414,7 +424,6 @@ local function disableInfiniteStamina()
     infiniteStaminaEnabled = false
     if shiftConnBegin then shiftConnBegin:Disconnect(); shiftConnBegin = nil end
     if shiftConnEnd then shiftConnEnd:Disconnect(); shiftConnEnd = nil end
-    -- restore original walkspeed
     local char, hrp, humanoid = getCharacter()
     if humanoid and originalWalkSpeed then
         humanoid.WalkSpeed = originalWalkSpeed
@@ -430,7 +439,7 @@ createButton("Infinite Stamina", function()
     end
 end)
 
--- Launch Nuke (fires remote)
+-- Launch Nuke
 createButton("Launch Nuke", function()
     safe(function()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -448,7 +457,7 @@ createButton("Launch Nuke", function()
     end)
 end)
 
--- Become entity (fires with string argument per your A)
+-- Become entity
 local function becomeEntity(name)
     safe(function()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -460,19 +469,11 @@ local function becomeEntity(name)
     end)
 end
 
-createButton("Become CaveDweller", function()
-    becomeEntity("CaveDweller")
-end)
+createButton("Become CaveDweller", function() becomeEntity("CaveDweller") end)
+createButton("Become Wendigo", function() becomeEntity("Wendigo") end)
+createButton("Become Werewolf", function() becomeEntity("Werewolf") end)
 
-createButton("Become Wendigo", function()
-    becomeEntity("Wendigo")
-end)
-
-createButton("Become Werewolf", function()
-    becomeEntity("Werewolf")
-end)
-
--- small quality-of-life: Full Bright + Unlock Camera
+-- Full Bright + Unlock Camera
 createButton("Full Bright", function()
     safe(function()
         Lighting.Brightness = 5
@@ -491,7 +492,7 @@ createButton("Unlock Camera", function()
     end)
 end)
 
--- clean up on script disable/unload
+-- Cleanup
 local function cleanup()
     if jumpConn then jumpConn:Disconnect(); jumpConn = nil end
     if tracerConnection then tracerConnection:Disconnect(); tracerConnection = nil end
@@ -501,7 +502,6 @@ local function cleanup()
     if shiftConnEnd then shiftConnEnd:Disconnect(); shiftConnEnd = nil end
 end
 
--- Bind to Close/Destroy if needed
 ScreenGui.Destroying:Connect(function() cleanup() end)
 
 print("✅ Survive Cave Dweller - BMF Script Loaded Successfully")
